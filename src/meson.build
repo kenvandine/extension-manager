@@ -11,6 +11,7 @@ exm_sources = [
   'web/exm-search-provider.c',
   'web/exm-image-resolver.c',
   'web/exm-request-handler.c',
+  'web/exm-comment-provider.c',
   'web/model/exm-search-result.c',
   'web/model/exm-comment.c'
 ]
