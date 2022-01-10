@@ -19,13 +19,17 @@
 #include "exm-config.h"
 #include "exm-window.h"
 
+#include "exm-comment-dialog.h"
+
 #include "local/exm-manager.h"
 #include "local/exm-extension.h"
 
 #include "web/exm-search-provider.h"
 #include "web/exm-image-resolver.h"
+#include "web/exm-comment-provider.h"
 
 #include "web/model/exm-search-result.h"
+#include "web/model/exm-comment.h"
 
 #include <adwaita.h>
 
@@ -220,6 +224,20 @@ install_remote (GtkButton   *button,
 }
 
 static void
+show_comments (GtkButton *button,
+               int        web_id)
+{
+    GtkRoot *root = gtk_widget_get_root (GTK_WIDGET (button));
+    ExmWindow *self = EXM_WINDOW (root);
+
+    ExmCommentDialog *dlg = exm_comment_dialog_new (web_id);
+    g_signal_connect_swapped (dlg, "response", G_CALLBACK (gtk_window_destroy), dlg);
+    gtk_window_set_transient_for (GTK_WINDOW (dlg), GTK_WINDOW (self));
+    gtk_window_set_modal (GTK_WINDOW (dlg), TRUE);
+    gtk_widget_show (GTK_WIDGET (dlg));
+}
+
+static void
 on_image_loaded (GObject      *source,
                  GAsyncResult *res,
                  GtkImage     *target)
@@ -271,6 +289,7 @@ search_widget_factory (ExmSearchResult *result,
     GtkWidget *description_label;
     GtkWidget *button_box;
     GtkWidget *install_btn;
+    GtkWidget *comments_btn;
     GtkWidget *link_btn;
     GtkWidget *icon;
     GtkWidget *screenshot;
@@ -278,6 +297,7 @@ search_widget_factory (ExmSearchResult *result,
     gchar *uri;
 
     gchar *uuid, *name, *creator, *icon_uri, *screenshot_uri, *link, *description;
+    int web_id;
     g_object_get (result,
                   "uuid", &uuid,
                   "name", &name,
@@ -286,6 +306,7 @@ search_widget_factory (ExmSearchResult *result,
                   "screenshot", &screenshot_uri,
                   "link", &link,
                   "description", &description,
+                  "pk", &web_id,
                   NULL);
 
     name = g_markup_escape_text (name, -1);
@@ -320,6 +341,10 @@ search_widget_factory (ExmSearchResult *result,
 
     link_btn = gtk_link_button_new_with_label (uri, "Go to Page");
     gtk_box_append (GTK_BOX (button_box), link_btn);
+
+    comments_btn = gtk_button_new_with_label ("Show Comments");
+    g_signal_connect (comments_btn, "clicked", G_CALLBACK (show_comments), web_id);
+    gtk_box_append (GTK_BOX (button_box), comments_btn);
 
     install_btn = gtk_button_new_with_label ("Install");
     g_signal_connect (install_btn, "clicked", G_CALLBACK (install_remote), uuid);

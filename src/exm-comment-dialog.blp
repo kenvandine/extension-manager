@@ -1,0 +1,20 @@
+using Gtk 4.0;
+using Adw 1;
+
+template ExmCommentDialog : Gtk.Dialog {
+  default-width: 600;
+  default-height: 400;
+	title: "Comments";
+
+	Gtk.ScrolledWindow {
+		Adw.Clamp {
+			styles ["clamp"]
+
+			Gtk.ListBox list_box {
+				styles ["boxed-list"]
+				valign: start;
+				selection-mode: none;
+			}
+		}
+	}
+}

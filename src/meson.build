@@ -2,6 +2,7 @@ exm_sources = [
   'main.c',
   'exm-window.c',
   'exm-application.c',
+  'exm-comment-dialog.c',
 
   # Extension Management
   'local/exm-manager.c',
@@ -26,7 +27,8 @@ exm_deps = [
 blueprints = custom_target('blueprints',
   input: files(
     'gtk/help-overlay.blp',
-    'exm-window.blp'
+    'exm-window.blp',
+    'exm-comment-dialog.blp'
   ),
   output: '.',
   command: [find_program('blueprint-compiler'), 'batch-compile', '@OUTPUT@', '@CURRENT_SOURCE_DIR@', '@INPUT@'],

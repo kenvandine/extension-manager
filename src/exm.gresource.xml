@@ -2,6 +2,7 @@
 <gresources>
   <gresource prefix="/com/mattjakeman/ExtensionManager">
     <file>exm-window.ui</file>
+    <file>exm-comment-dialog.ui</file>
     <file>gtk/help-overlay.ui</file>
     <file>style.css</file>
     <file>icons/plugin.png</file>
