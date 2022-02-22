@@ -23,6 +23,8 @@ enum {
 
 static GParamSpec *properties [N_PROPS];
 
+static void on_comment_set (ExmCommentTile *self);
+
 ExmCommentTile *
 exm_comment_tile_new (ExmComment *comment)
 {
@@ -69,6 +71,8 @@ exm_comment_tile_set_property (GObject      *object,
     {
     case PROP_COMMENT:
         self->comment = g_value_get_object (value);
+        if (self->comment)
+            on_comment_set (self);
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -76,10 +80,8 @@ exm_comment_tile_set_property (GObject      *object,
 }
 
 static void
-exm_comment_tile_constructed (GObject *object)
+on_comment_set (ExmCommentTile *self)
 {
-    ExmCommentTile *self = EXM_COMMENT_TILE (object);
-
     g_return_if_fail (EXM_IS_COMMENT (self->comment));
 
     TextFrame *frame;
@@ -104,14 +106,13 @@ exm_comment_tile_class_init (ExmCommentTileClass *klass)
     object_class->finalize = exm_comment_tile_finalize;
     object_class->get_property = exm_comment_tile_get_property;
     object_class->set_property = exm_comment_tile_set_property;
-    object_class->constructed = exm_comment_tile_constructed;
 
     properties [PROP_COMMENT] =
         g_param_spec_object ("comment",
                              "Comment",
                              "Comment",
                              EXM_TYPE_COMMENT,
-                             G_PARAM_READWRITE|G_PARAM_CONSTRUCT_ONLY);
+                             G_PARAM_READWRITE|G_PARAM_CONSTRUCT);
 
     g_object_class_install_properties (object_class, N_PROPS, properties);
 

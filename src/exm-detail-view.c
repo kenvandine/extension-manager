@@ -35,7 +35,7 @@ struct _ExmDetailView
     GtkFlowBox *supported_versions;
     GtkLinkButton *link_website;
     GtkScrolledWindow *scroll_area;
-    GtkFlowBox *comment_box;
+    GtkGridView *comment_box;
 };
 
 G_DEFINE_FINAL_TYPE (ExmDetailView, exm_detail_view, GTK_TYPE_BOX)
@@ -186,6 +186,26 @@ comment_factory (ExmComment    *comment,
 }
 
 static void
+comment_factory_setup (GtkSignalListItemFactory *self,
+                       GtkListItem              *listitem)
+{
+    ExmCommentTile *tile = exm_comment_tile_new (NULL);
+    gtk_list_item_set_child (listitem, GTK_WIDGET (tile));
+}
+
+static void
+comment_factory_bind (GtkSignalListItemFactory *self,
+                      GtkListItem              *listitem)
+{
+    GtkWidget *tile;
+    ExmComment *item;
+    item = gtk_list_item_get_item (listitem);
+    tile = gtk_list_item_get_child (listitem);
+
+    g_object_set (tile, "comment", item, NULL);
+}
+
+static void
 on_get_comments (GObject       *source,
                  GAsyncResult  *res,
                  ExmDetailView *self)
@@ -193,10 +213,12 @@ on_get_comments (GObject       *source,
     GError *error = NULL;
 
     GListModel *model = exm_comment_provider_get_comments_finish (EXM_COMMENT_PROVIDER (source), res, &error);
+    GtkNoSelection *selection = gtk_no_selection_new (model);
 
-    gtk_flow_box_bind_model (self->comment_box, model,
+    gtk_grid_view_set_model (self->comment_box, GTK_SELECTION_MODEL (selection));
+    /*gtk_flow_box_bind_model (self->comment_box, model,
                              (GtkListBoxCreateWidgetFunc) comment_factory,
-                             g_object_ref (self), g_object_unref);
+                             g_object_ref (self), g_object_unref);*/
 }
 
 static void
@@ -425,9 +447,17 @@ exm_detail_view_class_init (ExmDetailViewClass *klass)
 static void
 exm_detail_view_init (ExmDetailView *self)
 {
+    GtkListItemFactory *comment_factory;
+
     gtk_widget_init_template (GTK_WIDGET (self));
 
     self->provider = exm_data_provider_new ();
     self->resolver = exm_image_resolver_new ();
     self->comment_provider = exm_comment_provider_new ();
+
+    comment_factory = gtk_signal_list_item_factory_new ();
+    gtk_grid_view_set_factory (self->comment_box, comment_factory);
+
+    g_signal_connect (comment_factory, "setup", G_CALLBACK (comment_factory_setup), NULL);
+    g_signal_connect (comment_factory, "bind", G_CALLBACK (comment_factory_bind), NULL);
 }

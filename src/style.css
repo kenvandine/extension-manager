@@ -21,3 +21,7 @@
 .review-card {
   padding: 16px;
 }
+
+.comment-box {
+  background-color: transparent;
+}
