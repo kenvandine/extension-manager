@@ -1,0 +1,177 @@
+name: extension-manager
+base: core20
+version: '0.1'
+adopt-info: extension-manager
+summary: Single-line elevator pitch for your amazing snap # 79 char long summary
+description: |
+  This is my-snap's description. You have a paragraph or two to tell the
+  most important story about your snap. Keep it under 100 words though,
+  we live in tweetspace and your description wants to look good in the snap
+  store.
+
+grade: stable
+confinement: strict
+
+slots:
+  # for GtkApplication registration
+  warble:
+    interface: dbus
+    bus: session
+    name: com.mattjakeman.ExtensionManager
+
+apps:
+  extensions-manager:
+    extensions: [gnome-3-38]
+    desktop: usr/share/applications/com.mattjakeman.ExtensionManager.desktop
+    command: usr/bin/com.mattjakeman.ExtensionManager
+    common-id: com.mattjakeman.ExtensionManager.desktop
+
+parts:
+  buildenv:
+    plugin: nil
+    build-environment: &buildenv
+      - CC: /snap/gnome-3-38-2004-sdk/current/usr/bin/gcc
+      - ACLOCAL_PATH: $SNAPCRAFT_STAGE/usr/share/aclocal
+      - XDG_DATA_DIRS: $SNAPCRAFT_STAGE/usr/share:/usr/share:$XDG_DATA_DIRS
+      - LD_LIBRARY_PATH: $SNAPCRAFT_STAGE/usr/lib/vala-0.54:$SNAPCRAFT_STAGE/usr/lib:$SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET:$LD_LIBRARY_PATH
+      - GDK_PIXBUF_MODULE_FILE: $SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gdk-pixbuf-2.0/2.10.0/loaders.cache
+      - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/share/pkgconfig:$PKG_CONFIG_PATH
+      - CFLAGS: -Wno-error=redundant-decls -I$SNAPCRAFT_STAGE/usr/include
+  
+  glib:
+    source: https://gitlab.gnome.org/GNOME/glib.git
+    source-branch: 'glib-2-70'
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+    build-environment: *buildenv
+    build-environment:
+      - CFLAGS: -Wno-nonnull
+    override-build: |
+      set -eux
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/glib-2.0/
+      cp $SNAPCRAFT_PART_INSTALL/usr/bin/{gio-querymodules,glib-compile-schemas} $SNAPCRAFT_PART_INSTALL/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/glib-2.0/
+    build-packages:
+      - pkg-config
+      - libmount-dev
+      - gcc
+      - g++
+      - clang
+      - libffi-dev
+        
+  wayland:
+    after: [ glib ]
+    source: https://gitlab.freedesktop.org/wayland/wayland.git
+    source-tag: '1.20.0'
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Ddocumentation=false
+    build-environment: *buildenv
+    build-environment:
+      - LD_LIBRARY_PATH: $SNAPCRAFT_STAGE/usr/lib/vala-0.54:$SNAPCRAFT_STAGE/usr/lib:$SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET
+      - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/share/pkgconfig
+    build-packages:
+      - libxml2-dev
+
+  wayland-protocols:
+    after: [ wayland ]
+    source: https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+    source-tag: '1.25'
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - -Dtests=false
+    build-environment: *buildenv
+        
+  libadwaita:
+    after: [ gtk4 ]
+    source: https://gitlab.gnome.org/GNOME/libadwaita.git
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+    build-environment: *buildenv
+
+  pango:
+    after: [ glib ]
+    source: https://gitlab.gnome.org/GNOME/pango.git
+    source-tag: '1.50.4'
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Dinstall-tests=false
+      - -Dgtk_doc=false
+      - -Dintrospection=enabled
+    build-environment: *buildenv
+    build-packages:
+      - libthai-dev
+      - libxft-dev
+      - libxrender-dev
+      - libxt-dev
+      - cmake
+    override-pull: |
+      snapcraftctl pull
+      sed -i.bak -e 's|error=redundant|redundant|g' meson.build
+      
+  gtk4:
+    after: [ wayland-protocols, pango ]
+    source: https://gitlab.gnome.org/GNOME/gtk.git
+    source-branch: gtk-4-6
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+      - -Dbroadway-backend=false
+      - -Dx11-backend=true
+      - -Dwayland-backend=true
+      - -Dwin32-backend=false
+      - -Dmacos-backend=false
+      - -Dintrospection=disabled
+      - -Dgtk_doc=false
+      - -Ddemos=false
+      - -Dbuild-examples=false
+      - -Dbuild-tests=false
+      - -Dmedia-gstreamer=disbled
+      - -Dinstall-tests=false
+      - -Dc_args="-Wno-error=redundant-decls -I$SNAPCRAFT_STAGE/usr/include"
+    build-environment:
+      - LD_LIBRARY_PATH: $SNAPCRAFT_STAGE/usr/lib/vala-0.54:$SNAPCRAFT_STAGE/usr/lib:$SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET
+      - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/share/pkgconfig
+      - CFLAGS: -Wno-error=redundant-decls -I$SNAPCRAFT_STAGE/usr/include
+    organize:
+      usr/lib/gtk-4.0: usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gtk-4.0
+    build-packages:
+      - libcairo2-dev
+      - libgraphene-1.0-dev
+      - libjpeg-turbo8-dev
+    override-pull: |
+      snapcraftctl pull
+      sed -i.bak -e 's|error=redundant|redundant|g' meson.build
+      #cd $SNAPCRAFT_PART_SRC/subprojects/
+      #git clone --depth=1 https://gitlab.gnome.org/GNOME/pango.git
+      #sed -i.bak -e "s|subdir('tests')||g" pango/meson.build
+      #sed -i.bak -e 's|error=redundant|redundant|g' pango/meson.build
+    prime:
+      - -usr/bin/wayland-scanner
+      - -usr/include/wayland*
+  
+  extension-manager:
+    after: [ gtk4, libadwaita ]
+    source: .
+    plugin: meson
+    meson-parameters:
+      - --prefix=/usr
+      - --buildtype=release
+    build-environment: *buildenv
+    parse-info: [ usr/share/metainfo/com.mattjakeman.ExtensionManager.appdata.xml ]
